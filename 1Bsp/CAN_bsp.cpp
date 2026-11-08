@@ -5,8 +5,10 @@
 #include "CAN_bsp.h"
 
 #define MAX_CAN_DEV_NUM (14 * 4) //因为过滤器一共28组，can1 can2均分，而每组过滤器有两个32位寄存器，16位list模式每个寄存器存2个id，所以max 14 * 4
+// 下标 0=CAN1、1=CAN2；数组里存的是接收对象指针，中断靠它找回对象。
 can_device_receive *can_device_rx_list[2][MAX_CAN_DEV_NUM] = {0};
 
+// 全局过滤器模板：IDLIST + 16 位；每次注册/改 ID 都复用它。
 CAN_FilterTypeDef filter_cfg = {
         .FilterMode = CAN_FILTERMODE_IDLIST,
         .FilterScale = CAN_FILTERSCALE_16BIT,
@@ -56,9 +58,11 @@ bool can_device_transmit::set_id(uint32_t id_) {
     }
 }
 
+// 只入队，不直接调用 HAL；timeout=0 表示队列满时立即返回，不阻塞控制任务。
 osStatus_t can_device_transmit::can_send_msg() { //实际上是发送进队列中
     osStatus_t state;
     if (member.hcan == &hcan1) {
+        // 参数：队列句柄、要拷贝的数据地址、消息优先级(0)、等待时间(0=不等待)
         state = osMessageQueuePut(can1_send_fifoHandle, this, 0, 0);
     } else {
         state = osMessageQueuePut(can2_send_fifoHandle, this, 0, 0);
@@ -66,6 +70,8 @@ osStatus_t can_device_transmit::can_send_msg() { //实际上是发送进队列�
     return state;
 }
 
+// 发送任务：先拿一个邮箱信号量（共 3 个），再从队列取消息交给 HAL。
+// 发送完成中断释放信号量，保证同一时刻最多 3 帧在途。
 void can1_sending_service(void *argument) { //一个task
     can_device_transmit_member msg; //消息
     uint32_t tx_mailbox;
@@ -73,6 +79,7 @@ void can1_sending_service(void *argument) { //一个task
     tx_header.RTR = CAN_RTR_DATA;
     tx_header.IDE = CAN_ID_STD;
     for (;;) {
+        // 3 个 token 对应 3 个发送邮箱；没有空邮箱就在这里睡，不占 CPU
         osSemaphoreAcquire(CAN1CountingSemHandle,osWaitForever);//获得信号量
         osMessageQueueGet(can1_send_fifoHandle, &msg, 0, osWaitForever);//获取队列中的数据
         tx_header.StdId = msg.id;          //标准标识符
@@ -122,6 +129,7 @@ void HAL_CAN_TxMailbox2CompleteCallback(CAN_HandleTypeDef *hcan) {
 
 /**************************以下为can接收**********************************/
 
+// 构造即注册：4 个 ID 共用一个过滤器 bank；CAN1 用 FIFO0，CAN2 用 FIFO1。
 can_device_receive::can_device_receive(CAN_HandleTypeDef *hcan_, uint32_t id_, can_rx_callback *callback_)
                             : hcan(hcan_), id(id_), callback(callback_), rx_data{}{
     is_callback_none = 0;
@@ -131,13 +139,16 @@ can_device_receive::can_device_receive(CAN_HandleTypeDef *hcan_, uint32_t id_, c
         filter_cfg.FilterFIFOAssignment = CAN_RX_FIFO0;
         this->index = can1_device_num;
         can1_device_num++;
+        // index/4 是 bank 号，index%4 是 bank 内第几个 ID。
         filter_cfg.FilterBank = this->index / 4;
         can1_filter[this->index / 4][this->index % 4] = this->id;
+        // 16 位 list 模式：标准 ID 放在每个 16 位字段的 bit5~bit15，所以要左移 5。
         filter_cfg.FilterIdLow = can1_filter[this->index / 4][0] << 5;
         filter_cfg.FilterMaskIdLow = can1_filter[this->index / 4][1] << 5;
         filter_cfg.FilterIdHigh = can1_filter[this->index / 4][2] << 5;
         filter_cfg.FilterMaskIdHigh = can1_filter[this->index / 4][3] << 5;
         HAL_CAN_ConfigFilter(&hcan1, &filter_cfg);
+        // 把对象地址存进设备表；中断用 FilterMatchIndex 查这张表。
         can_device_rx_list[0][this->index] = this;
     } else if (hcan == &hcan2 && can2_device_num < MAX_CAN_DEV_NUM) {
         filter_cfg.FilterFIFOAssignment = CAN_RX_FIFO1;
@@ -178,6 +189,7 @@ void can_device_receive::can_modify_id(uint32_t id_){
         filter_cfg.FilterIdHigh = can1_filter[this->index / 4][2] << 5;
         filter_cfg.FilterMaskIdHigh = can1_filter[this->index / 4][3] << 5;
         HAL_CAN_ConfigFilter(&hcan1, &filter_cfg);
+        // 把对象地址存进设备表；中断用 FilterMatchIndex 查这张表。
         can_device_rx_list[0][this->index] = this;
     } else if (hcan == &hcan2) {
         filter_cfg.FilterFIFOAssignment = CAN_RX_FIFO1;
@@ -198,12 +210,14 @@ void can_device_receive::can_modify_id(uint32_t id_){
 
 
 //CAN1 接收
+// 中断里只做取帧、查表、调回调；具体解析在回调里完成。
 void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan) {
     CAN_RxHeaderTypeDef rx_header;
     uint8_t rx_data[8];
     HAL_CAN_GetRxMessage(hcan, CAN_RX_FIFO0, &rx_header, rx_data);
-    uint32_t index = rx_header.FilterMatchIndex;
+    uint32_t index = rx_header.FilterMatchIndex;   // HAL 的匹配索引，模板当作设备槽位号
     can_device_receive *dev = can_device_rx_list[0][index];
+    // 正常配置下 index 应命中已登记设备；严格写法应先判空再 memcpy。
     memcpy(dev->rx_data,rx_data,8);
     if (dev && dev->callback) {
         dev->callback(dev, rx_data);

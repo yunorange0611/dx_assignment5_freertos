@@ -73,6 +73,13 @@ const osThreadAttr_t DJI_Motor_Service_attributes = {
   .stack_size = 256 * 4,
   .priority = (osPriority_t) osPriorityHigh,
 };
+/* Definitions for LED */
+osThreadId_t LEDHandle;
+const osThreadAttr_t LED_attributes = {
+  .name = "LED",
+  .stack_size = 128 * 4,
+  .priority = (osPriority_t) osPriorityNormal,
+};
 /* Definitions for can1_send_fifo */
 osMessageQueueId_t can1_send_fifoHandle;
 const osMessageQueueAttr_t can1_send_fifo_attributes = {
@@ -102,6 +109,7 @@ const osSemaphoreAttr_t CAN2CountingSem_attributes = {
 void can1_sending_service(void *argument);
 void can2_sending_service(void *argument);
 void DJI_motor_service(void *argument);
+void StartTask04(void *argument);
 
 void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
 
@@ -154,6 +162,9 @@ void MX_FREERTOS_Init(void) {
 
   /* creation of DJI_Motor_Service */
   DJI_Motor_ServiceHandle = osThreadNew(DJI_motor_service, NULL, &DJI_Motor_Service_attributes);
+
+  /* creation of LED */
+  LEDHandle = osThreadNew(StartTask04, NULL, &LED_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
@@ -217,6 +228,24 @@ __weak void DJI_motor_service(void *argument)
     osDelay(1);
   }
   /* USER CODE END DJI_motor_service */
+}
+
+/* USER CODE BEGIN Header_StartTask04 */
+/**
+* @brief Function implementing the LED thread.
+* @param argument: Not used
+* @retval None
+*/
+/* USER CODE END Header_StartTask04 */
+void StartTask04(void *argument)
+{
+  /* USER CODE BEGIN StartTask04 */
+  /* Infinite loop */
+  for(;;)
+  {
+    osDelay(1);
+  }
+  /* USER CODE END StartTask04 */
 }
 
 /* Private application code --------------------------------------------------*/
