@@ -237,7 +237,7 @@ __weak void DJI_motor_service(void *argument)
 * @retval None
 */
 /* USER CODE END Header_StartTask04 */
-void StartTask04(void *argument)
+__weak void StartTask04(void *argument)
 {
   /* USER CODE BEGIN StartTask04 */
   /* Infinite loop */
