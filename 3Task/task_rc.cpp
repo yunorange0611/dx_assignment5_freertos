@@ -27,6 +27,7 @@ void start_task_rc(void *argument)
     for (;;)
     {
         Task_RC_Handle();
+
         tick += 1;
         osDelayUntil(tick);
     }

@@ -141,7 +141,8 @@ void BSP_RC_Update(void)
 {
     bsp_rc.last_update_time = rc_raw.last_update_time;
     bsp_rc.online = ((HAL_GetTick() - rc_raw.last_update_time) > RC_OFFLINE_TIME) ? 0 : 1;
-
+//判断是否在线
+//? 0 : 1 是三元运算符。条件成立取 0，否则取 1
     if (!bsp_rc.online)   /* 断联：物理量全部归中 */
     {
         bsp_rc.right_x = bsp_rc.right_y = 0.0f;
