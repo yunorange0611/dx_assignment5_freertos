@@ -77,7 +77,14 @@ const osThreadAttr_t DJI_Motor_Service_attributes = {
 osThreadId_t LEDHandle;
 const osThreadAttr_t LED_attributes = {
   .name = "LED",
-  .stack_size = 128 * 4,
+  .stack_size = 256 * 4,
+  .priority = (osPriority_t) osPriorityNormal,
+};
+/* Definitions for CAN_P_RX */
+osThreadId_t CAN_P_RXHandle;
+const osThreadAttr_t CAN_P_RX_attributes = {
+  .name = "CAN_P_RX",
+  .stack_size = 256 * 4,
   .priority = (osPriority_t) osPriorityNormal,
 };
 /* Definitions for can1_send_fifo */
@@ -109,7 +116,8 @@ const osSemaphoreAttr_t CAN2CountingSem_attributes = {
 void can1_sending_service(void *argument);
 void can2_sending_service(void *argument);
 void DJI_motor_service(void *argument);
-void StartTask04(void *argument);
+void start_task_led(void *argument);
+void start_task_p_rx(void *argument);
 
 void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
 
@@ -164,7 +172,10 @@ void MX_FREERTOS_Init(void) {
   DJI_Motor_ServiceHandle = osThreadNew(DJI_motor_service, NULL, &DJI_Motor_Service_attributes);
 
   /* creation of LED */
-  LEDHandle = osThreadNew(StartTask04, NULL, &LED_attributes);
+  LEDHandle = osThreadNew(start_task_led, NULL, &LED_attributes);
+
+  /* creation of CAN_P_RX */
+  CAN_P_RXHandle = osThreadNew(start_task_p_rx, NULL, &CAN_P_RX_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
@@ -230,22 +241,40 @@ __weak void DJI_motor_service(void *argument)
   /* USER CODE END DJI_motor_service */
 }
 
-/* USER CODE BEGIN Header_StartTask04 */
+/* USER CODE BEGIN Header_start_task_led */
 /**
 * @brief Function implementing the LED thread.
 * @param argument: Not used
 * @retval None
 */
-/* USER CODE END Header_StartTask04 */
-__weak void StartTask04(void *argument)
+/* USER CODE END Header_start_task_led */
+__weak void start_task_led(void *argument)
 {
-  /* USER CODE BEGIN StartTask04 */
+  /* USER CODE BEGIN start_task_led */
   /* Infinite loop */
   for(;;)
   {
     osDelay(1);
   }
-  /* USER CODE END StartTask04 */
+  /* USER CODE END start_task_led */
+}
+
+/* USER CODE BEGIN Header_start_task_p_rx */
+/**
+* @brief Function implementing the CAN_P_RX thread.
+* @param argument: Not used
+* @retval None
+*/
+/* USER CODE END Header_start_task_p_rx */
+__weak void start_task_p_rx(void *argument)
+{
+  /* USER CODE BEGIN start_task_p_rx */
+  /* Infinite loop */
+  for(;;)
+  {
+    osDelay(1);
+  }
+  /* USER CODE END start_task_p_rx */
 }
 
 /* Private application code --------------------------------------------------*/
