@@ -62,6 +62,7 @@ target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
     # Add user defined include paths
         1Bsp
         2User_Driver
+        2User_Driver/ADD
         2User_Driver/Motor_Driver
         3Task
 )
@@ -79,4 +80,19 @@ target_link_libraries(${CMAKE_PROJECT_NAME}
     stm32cubemx
 
     # Add user defined libraries
+)
+target_link_directories(${CMAKE_PROJECT_NAME} PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/DSP_Lib
+)
+
+target_compile_definitions(${CMAKE_PROJECT_NAME} PRIVATE
+        ARM_MATH_CM4
+        ARM_MATH_MATRIX_CHECK
+        ARM_MATH_ROUNDING
+        INFANTRY_ID=0
+)
+
+target_link_libraries(${CMAKE_PROJECT_NAME}
+        stm32cubemx
+        arm_cortexM4lf_math
 )

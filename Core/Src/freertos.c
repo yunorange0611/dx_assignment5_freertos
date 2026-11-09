@@ -94,12 +94,19 @@ const osThreadAttr_t MOTOR_attributes = {
   .stack_size = 512 * 4,
   .priority = (osPriority_t) osPriorityAboveNormal,
 };
-/* Definitions for myTask07 */
-osThreadId_t myTask07Handle;
-const osThreadAttr_t myTask07_attributes = {
-  .name = "myTask07",
+/* Definitions for RC_RX */
+osThreadId_t RC_RXHandle;
+const osThreadAttr_t RC_RX_attributes = {
+  .name = "RC_RX",
   .stack_size = 256 * 4,
   .priority = (osPriority_t) osPriorityRealtime,
+};
+/* Definitions for INS */
+osThreadId_t INSHandle;
+const osThreadAttr_t INS_attributes = {
+  .name = "INS",
+  .stack_size = 512 * 4,
+  .priority = (osPriority_t) osPriorityAboveNormal,
 };
 /* Definitions for can1_send_fifo */
 osMessageQueueId_t can1_send_fifoHandle;
@@ -134,6 +141,7 @@ void start_task_led(void *argument);
 void start_task_p_rx(void *argument);
 void start_task_motor(void *argument);
 void start_task_rc(void *argument);
+void start_task_ins(void *argument);
 
 void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
 
@@ -196,8 +204,11 @@ void MX_FREERTOS_Init(void) {
   /* creation of MOTOR */
   MOTORHandle = osThreadNew(start_task_motor, NULL, &MOTOR_attributes);
 
-  /* creation of myTask07 */
-  myTask07Handle = osThreadNew(start_task_rc, NULL, &myTask07_attributes);
+  /* creation of RC_RX */
+  RC_RXHandle = osThreadNew(start_task_rc, NULL, &RC_RX_attributes);
+
+  /* creation of INS */
+  INSHandle = osThreadNew(start_task_ins, NULL, &INS_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
@@ -333,6 +344,24 @@ __weak void start_task_rc(void *argument)
     osDelay(1);
   }
   /* USER CODE END start_task_rc */
+}
+
+/* USER CODE BEGIN Header_start_task_ins */
+/**
+* @brief Function implementing the INS thread.
+* @param argument: Not used
+* @retval None
+*/
+/* USER CODE END Header_start_task_ins */
+__weak void start_task_ins(void *argument)
+{
+  /* USER CODE BEGIN start_task_ins */
+  /* Infinite loop */
+  for(;;)
+  {
+    osDelay(1);
+  }
+  /* USER CODE END start_task_ins */
 }
 
 /* Private application code --------------------------------------------------*/

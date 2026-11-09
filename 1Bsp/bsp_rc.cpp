@@ -14,7 +14,7 @@ static struct {
     uint16_t right_x, right_y;
     uint16_t left_x, left_y;
     uint8_t  s1, s2;
-    volatile uint32_t last_update_time;   /* 在串口中断里写，任务里读 */
+    volatile uint32_t last_update_time;   /* 在串口中断里写，任务里读,用这个v */
 } rc_raw;
 
 /* ============ BSP 对外：归一化后的物理量 ============ */
@@ -24,8 +24,7 @@ static uint8_t rx_buffer[RX_BUFFER_SIZE];      /* DMA 环形写入*/
 static uint8_t frame_buffer[RX_BUFFER_SIZE];   /* 临时缓冲区 */
 static uint16_t old_pos = 0;                   /* 上次 DMA 位置 */
 
-/* 启动（或重启）DBUS 的 DMA + 空闲中断接收
- * 关掉 DMA 半传输中断：否则收到半帧（9 字节）也会进回调，len 不是 18 的倍数 */
+/* 启动DBUS 的 DMA + 空闲中断接收*/
 static void BSP_RC_StartRx(void)
 {
     old_pos = 0;
@@ -49,7 +48,7 @@ void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart)
 static void BSP_RC_Unpack(uint8_t *data, uint16_t len)
 {
     if (len == 0 || len % 18 != 0) return;
-    /*位运算 = 把这 18 字节的比特流"按田字格切出来"*/
+    /*位运算把这 18 字节的比特流按田字格切出来*/
     //什么shit东西//
     uint8_t *latest = data + len - 18;   /* 指针偏移到最后一帧开头 */
 
@@ -60,8 +59,7 @@ static void BSP_RC_Unpack(uint8_t *data, uint16_t len)
     uint8_t  s1 = ((latest[5] >> 4) & 0x000C) >> 2;
     uint8_t  s2 = (latest[5] >> 4) & 0x0003;
 
-    /* 合法性检查：摇杆应在 364~1684，拨杆应为 1/2/3。
-     * 不合法视为干扰帧丢弃，且不刷新时间戳——持续的坏帧会按断联触发关控 */
+    /* 合法性检查：摇杆应在 364~1684，拨杆应为 1/2/3。*/
     if (right_x < RC_CH_VALUE_MIN || right_x > RC_CH_VALUE_MAX) return;
     if (right_y < RC_CH_VALUE_MIN || right_y > RC_CH_VALUE_MAX) return;
     if (left_x  < RC_CH_VALUE_MIN || left_x  > RC_CH_VALUE_MAX) return;
@@ -130,9 +128,7 @@ static int8_t BSP_RC_Map_Switch(uint8_t sw)
     return 0;
 }
 
-/* 在线判定：直接读中断里刷新的时间戳，不依赖任何任务有没有跑到。
- * 云台的出力门控用它——RC 任务优先级低，CPU 忙时可能跑不到，
- * 那时 bsp_rc.online 会停在旧值 1，关控就失效了 */
+/* 在线判定*/
 uint8_t BSP_RC_IsOnline(void)
 {
     uint32_t last = rc_raw.last_update_time;

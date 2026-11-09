@@ -24,7 +24,8 @@
 #include "spi.h"
 #include "usart.h"
 #include "gpio.h"
-
+#include "bsp_dwt.h"
+#include "bsp_imu.h"
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 
@@ -104,6 +105,12 @@ int main(void)
   MX_SPI1_Init();
   /* USER CODE BEGIN 2 */
     bsp_can_init();
+  DWT_Init(168);                    // 必须在 SystemClock_Config 之后
+
+  while (BMI088_init(&hspi1, 1) != BMI088_NO_ERROR)
+  {
+
+  }
   /* USER CODE END 2 */
 
   /* Init scheduler */
