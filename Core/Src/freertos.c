@@ -87,6 +87,20 @@ const osThreadAttr_t CAN_P_RX_attributes = {
   .stack_size = 256 * 4,
   .priority = (osPriority_t) osPriorityNormal,
 };
+/* Definitions for MOTOR */
+osThreadId_t MOTORHandle;
+const osThreadAttr_t MOTOR_attributes = {
+  .name = "MOTOR",
+  .stack_size = 512 * 4,
+  .priority = (osPriority_t) osPriorityAboveNormal,
+};
+/* Definitions for myTask07 */
+osThreadId_t myTask07Handle;
+const osThreadAttr_t myTask07_attributes = {
+  .name = "myTask07",
+  .stack_size = 256 * 4,
+  .priority = (osPriority_t) osPriorityRealtime,
+};
 /* Definitions for can1_send_fifo */
 osMessageQueueId_t can1_send_fifoHandle;
 const osMessageQueueAttr_t can1_send_fifo_attributes = {
@@ -118,6 +132,8 @@ void can2_sending_service(void *argument);
 void DJI_motor_service(void *argument);
 void start_task_led(void *argument);
 void start_task_p_rx(void *argument);
+void start_task_motor(void *argument);
+void start_task_rc(void *argument);
 
 void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
 
@@ -176,6 +192,12 @@ void MX_FREERTOS_Init(void) {
 
   /* creation of CAN_P_RX */
   CAN_P_RXHandle = osThreadNew(start_task_p_rx, NULL, &CAN_P_RX_attributes);
+
+  /* creation of MOTOR */
+  MOTORHandle = osThreadNew(start_task_motor, NULL, &MOTOR_attributes);
+
+  /* creation of myTask07 */
+  myTask07Handle = osThreadNew(start_task_rc, NULL, &myTask07_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
@@ -275,6 +297,42 @@ __weak void start_task_p_rx(void *argument)
     osDelay(1);
   }
   /* USER CODE END start_task_p_rx */
+}
+
+/* USER CODE BEGIN Header_start_task_motor */
+/**
+* @brief Function implementing the MOTOR thread.
+* @param argument: Not used
+* @retval None
+*/
+/* USER CODE END Header_start_task_motor */
+__weak void start_task_motor(void *argument)
+{
+  /* USER CODE BEGIN start_task_motor */
+  /* Infinite loop */
+  for(;;)
+  {
+    osDelay(1);
+  }
+  /* USER CODE END start_task_motor */
+}
+
+/* USER CODE BEGIN Header_start_task_rc */
+/**
+* @brief Function implementing the myTask07 thread.
+* @param argument: Not used
+* @retval None
+*/
+/* USER CODE END Header_start_task_rc */
+__weak void start_task_rc(void *argument)
+{
+  /* USER CODE BEGIN start_task_rc */
+  /* Infinite loop */
+  for(;;)
+  {
+    osDelay(1);
+  }
+  /* USER CODE END start_task_rc */
 }
 
 /* Private application code --------------------------------------------------*/
